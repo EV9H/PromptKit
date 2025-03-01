@@ -4,6 +4,7 @@ import HeaderAuth from "@/components/header-auth";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Toaster } from "@/components/ui/toaster";
 import { hasEnvVars } from "@/utils/supabase/check-env-vars";
+import { createClient } from "@/utils/supabase/server";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Link from "next/link";
@@ -24,11 +25,14 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <html lang="en" className={geistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
@@ -50,8 +54,11 @@ export default function RootLayout({
                     <Link href={"/prompts/create"} className="text-muted-foreground hover:text-foreground">
                       Create
                     </Link>
+
+
                   </div>
                   {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}
+
                 </div>
               </nav>
               <div className="flex flex-col gap-8 max-w-5xl w-full">
@@ -70,7 +77,6 @@ export default function RootLayout({
                     Agilee
                   </a>
                 </p>
-                <ThemeSwitcher />
               </footer>
             </div>
           </main>

@@ -5,6 +5,14 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { createClient } from "@/utils/supabase/server";
 import { ThemeSwitcher } from "./theme-switcher";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "./ui/dropdown-menu";
+import { User } from "lucide-react";
 
 export default async function AuthButton() {
   const supabase = await createClient();
@@ -51,13 +59,35 @@ export default async function AuthButton() {
   }
   return user ? (
     <div className="flex items-center gap-4">
-      Hey, {user.email}!
+      <Link
+        href="/my-prompts"
+        className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+      >
+        My Prompts
+      </Link>
+      <span className="text-muted-foreground">|</span>
       <ThemeSwitcher />
-      <form action={signOutAction}>
-        <Button type="submit" variant={"outline"}>
-          Sign out
-        </Button>
-      </form>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="flex items-center gap-2 h-8 px-2">
+            <User size={16} />
+            <span className="text-sm font-medium">{user.email?.split('@')[0]}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href="/profile">Profile</Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild>
+            <form action={signOutAction} className="w-full">
+              <button type="submit" className="w-full text-left">
+                Sign out
+              </button>
+            </form>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   ) : (
     <div className="flex gap-2 items-center">

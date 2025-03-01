@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
@@ -13,6 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PromptLikeButton } from "@/components/prompts/prompt-like-button";
+import { createClient } from "@/utils/supabase/client";
 
 interface TrendingPromptCardProps {
     prompt: {
@@ -22,8 +25,9 @@ interface TrendingPromptCardProps {
         created_at: string;
         updated_at: string;
         copy_count: number;
-        creator_username: string;
-        creator_avatar: string | null;
+        user_id: string;
+        creator_username?: string;
+        creator_avatar?: string | null;
         like_count: number;
         preview_image: string | null;
         content?: string;
@@ -31,6 +35,58 @@ interface TrendingPromptCardProps {
 }
 
 export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
+    const [creatorInfo, setCreatorInfo] = useState<{
+        username: string | null;
+        avatar_url: string | null;
+        isLoading: boolean;
+    }>({
+        username: prompt.creator_username || null,
+        avatar_url: prompt.creator_avatar || null,
+        isLoading: !prompt.creator_username
+    });
+
+    // Fetch creator information if not already provided
+    useEffect(() => {
+        const fetchCreatorInfo = async () => {
+            if (prompt.creator_username && prompt.creator_avatar !== undefined) {
+                return; // Already have the info
+            }
+
+            if (!prompt.user_id) {
+                setCreatorInfo(prev => ({ ...prev, isLoading: false }));
+                return;
+            }
+
+            try {
+                const supabase = createClient();
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('username, avatar_url')
+                    .eq('id', prompt.user_id)
+                    .single();
+
+                if (error) {
+                    console.error("Error fetching profile:", error);
+                    setCreatorInfo(prev => ({ ...prev, isLoading: false }));
+                    return;
+                }
+
+                setCreatorInfo({
+                    username: profile?.username || null,
+                    avatar_url: profile?.avatar_url || null,
+                    isLoading: false
+                });
+            } catch (error) {
+                console.error("Error in fetchCreatorInfo:", error);
+                setCreatorInfo(prev => ({ ...prev, isLoading: false }));
+            }
+        };
+
+        if (creatorInfo.isLoading) {
+            fetchCreatorInfo();
+        }
+    }, [prompt.user_id, prompt.creator_username, prompt.creator_avatar, creatorInfo.isLoading]);
+
     const getInitials = (name: string | null | undefined) => {
         if (!name) return "UK"; // UK for "Unknown"
 
@@ -96,6 +152,11 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
         );
     };
 
+    // Username displayed based on fetched data or fallback
+    const displayUsername = creatorInfo.username || "Unknown User";
+    // Avatar displayed based on fetched data
+    const avatarUrl = creatorInfo.avatar_url || "";
+
     return (
         <Card className="overflow-hidden flex flex-col h-full transition-all hover:shadow-md">
             <Link href={`/prompts/${prompt.id}`} className="block">
@@ -131,12 +192,12 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
 
             <CardContent className="p-4 pt-0 flex-grow">
                 <div className="flex items-center gap-2">
-                    <Link href={`/profiles/${prompt.creator_username || "#"}`} className="flex items-center gap-2">
+                    <Link href={`/profiles/${displayUsername}`} className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                            <AvatarImage src={prompt.creator_avatar || ""} alt={prompt.creator_username || "Unknown User"} />
-                            <AvatarFallback>{getInitials(prompt.creator_username)}</AvatarFallback>
+                            <AvatarImage src={avatarUrl} alt={displayUsername} />
+                            <AvatarFallback>{getInitials(displayUsername)}</AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium">{prompt.creator_username || "Unknown User"}</span>
+                        <span className="text-sm font-medium">{displayUsername}</span>
                     </Link>
                     <span className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(prompt.created_at), { addSuffix: true })}
