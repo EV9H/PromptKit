@@ -25,10 +25,18 @@ export async function POST(request: NextRequest) {
                 title: promptData.title,
                 description: promptData.description,
                 content: promptData.content,
-                category_id: promptData.categoryId,
                 user_id: user.id,
                 is_public: promptData.isPublic,
                 copy_count: 0
+            })
+            .select()
+            .single();
+
+        const { data: categoryData, error: categoryError } = await supabase
+            .from("prompt_categories")
+            .insert({
+                prompt_id: data.id,
+                category_id: promptData.categoryId
             })
             .select()
             .single();
@@ -37,6 +45,13 @@ export async function POST(request: NextRequest) {
             console.error("Error creating prompt:", error);
             return NextResponse.json(
                 { error: "Failed to create prompt" },
+                { status: 500 }
+            );
+        }
+        if (categoryError) {
+            console.error("Error creating prompt category:", categoryError);
+            return NextResponse.json(
+                { error: "Failed to create prompt category" },
                 { status: 500 }
             );
         }
