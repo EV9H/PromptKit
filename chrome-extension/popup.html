@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptKit</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1 id="open-app"> PromptKit</h1>
+            <div id="user-info">
+                <span id="username">Not signed in</span>
+                <button id="auth-button" class="ghost-btn">Sign In</button>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="created">My Prompts</button>
+            <button class="tab-btn" data-tab="liked">Liked Prompts</button>
+        </div>
+
+        <div id="login-message" class="content-area">
+            <p>Please sign in to view your prompts</p>
+            <p class="text-sm">You'll be redirected to sign in with your PromptKit account</p>
+        </div>
+
+        <div id="created" class="tab-content active">
+            <div class="loading">Loading your prompts...</div>
+            <div class="prompt-list"></div>
+            <div class="error-message"></div>
+        </div>
+
+        <div id="liked" class="tab-content">
+            <div class="loading">Loading your liked prompts...</div>
+            <div class="prompt-list"></div>
+            <div class="error-message"></div>
+        </div>
+
+
+    </div>
+
+    <script src="js/popup.js"></script>
+</body>
+
+</html>

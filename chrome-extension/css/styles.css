@@ -1,0 +1,294 @@
+:root {
+    --primary-color: hsl(346.8 77.2% 49.8%);
+    --primary-light: hsl(346.8 77.2% 59.8%);
+    --primary-dark: hsl(346.8 77.2% 39.8%);
+    --foreground: hsl(240 10% 3.9%);
+    --foreground-muted: hsl(240 3.8% 46.1%);
+    --background: #ffffff;
+    --card-bg: #ffffff;
+    --card-border: hsl(240 5.9% 90%);
+    --muted-bg: hsl(240 4.8% 95.9%);
+    --success-color: #10b981;
+    --error-color: #ef4444;
+    --radius: 0.75rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --foreground: hsl(0 0% 95%);
+        --foreground-muted: hsl(240 5% 64.9%);
+        --background: hsl(20 14.3% 4.1%);
+        --card-bg: hsl(24 9.8% 10%);
+        --card-border: hsl(240 3.7% 15.9%);
+        --muted-bg: hsl(0 0% 15%);
+    }
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
+    width: 380px;
+    height: 500px;
+    overflow-y: auto;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid var(--card-border);
+}
+
+header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+#user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#username {
+    font-size: 14px;
+    color: var(--foreground-muted);
+    cursor: pointer;
+}
+
+#username:hover {
+    color: var(--primary-dark);
+}
+
+#open-app {
+    cursor: pointer;
+}
+
+.text-sm {
+    font-size: 14px;
+    margin-top: 8px;
+    opacity: 0.7;
+}
+
+.btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.ghost-btn {
+    background-color: transparent;
+    color: var(--foreground-muted);
+    border: 0;
+}
+
+.ghost-btn:hover {
+    color: var(--primary-dark);
+}
+
+
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--card-border);
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--foreground-muted);
+    cursor: pointer;
+    transition: color 0.2s, border-bottom 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--primary-color);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.tab-content {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.content-area {
+    padding: 16px;
+    text-align: center;
+    color: var(--foreground-muted);
+}
+
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: var(--foreground-muted);
+}
+
+.prompt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.prompt-card {
+    border: 1px solid var(--card-border);
+    background-color: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.prompt-card:hover {
+    border-color: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.prompt-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.3s ease;
+}
+
+.prompt-card.copying::after {
+    opacity: 0.1;
+}
+
+.prompt-card.copied::after {
+    opacity: 0.2;
+}
+
+.prompt-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 4px;
+    color: var(--foreground);
+}
+
+.prompt-description {
+    font-size: 14px;
+    color: var(--foreground-muted);
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.prompt-metadata {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.prompt-category {
+    color: var(--foreground-muted);
+    background-color: var(--muted-bg);
+    padding: 2px 8px;
+    border-radius: var(--radius);
+    font-weight: 500;
+}
+
+.prompt-copy-hint {
+    color: var(--primary-color);
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.prompt-card:hover .prompt-copy-hint {
+    opacity: 1;
+}
+
+.error-message {
+    color: var(--error-color);
+    text-align: center;
+    padding: 16px;
+    display: none;
+}
+
+footer {
+    padding: 12px;
+    text-align: center;
+    border-top: 1px solid var(--card-border);
+}
+
+footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+#toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 1000;
+    box-shadow: var(--shadow);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+}
+
+#toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

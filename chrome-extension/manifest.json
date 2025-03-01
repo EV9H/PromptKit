@@ -1,0 +1,44 @@
+{
+    "manifest_version": 3,
+    "name": "PromptKit Extension",
+    "version": "1.0",
+    "description": "Access your PromptKit prompts directly from your browser",
+    "action": {
+        "default_popup": "popup.html",
+        "default_icon": {
+            "16": "icons/icon16.png",
+            "48": "icons/icon48.png",
+            "128": "icons/icon128.png"
+        }
+    },
+    "background": {
+        "service_worker": "js/background.js",
+        "type": "module"
+    },
+    "permissions": [
+        "storage",
+        "identity",
+        "tabs",
+        "scripting"
+    ],
+    "host_permissions": [
+        "*://*.promptkit.com/*",
+        "http://localhost:3000/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "http://localhost:3000/auth-callback*",
+                "*://*.promptkit.com/auth-callback*"
+            ],
+            "js": [
+                "js/auth-callback.js"
+            ]
+        }
+    ],
+    "icons": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    }
+}
