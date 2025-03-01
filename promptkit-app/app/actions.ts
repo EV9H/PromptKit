@@ -42,6 +42,7 @@ export const signUpAction = async (formData: FormData) => {
 export const signInAction = async (formData: FormData) => {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const callbackUrl = formData.get("callbackUrl")?.toString();
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithPassword({
@@ -53,7 +54,7 @@ export const signInAction = async (formData: FormData) => {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  return redirect("/protected");
+  return redirect(callbackUrl || "/");
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {

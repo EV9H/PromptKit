@@ -9,10 +9,17 @@ export default async function Home() {
   const supabase = await createClient();
 
   // Fetch trending prompts
-  const { data: trendingPrompts, error: trendingError } = await supabase
-    .from('trending_prompts')
-    .select('*')
-    .limit(6);
+  const { data: trendingPromptsRaw, error: trendingError } = await supabase
+    .from('prompts')
+    .select('*, content')
+    .limit(12);
+
+  // Process prompts to include only a preview of content
+  const trendingPrompts = trendingPromptsRaw?.map(prompt => ({
+    ...prompt,
+    content: prompt.content && prompt.content.length > 300 ?
+      prompt.content.substring(0, 300) : prompt.content
+  }));
 
   // Fetch categories
   const { data: categories, error: categoriesError } = await supabase
@@ -39,7 +46,7 @@ export default async function Home() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link href="/auth/sign-up">
+              <Link href="/sign-up">
                 Get Started
               </Link>
             </Button>

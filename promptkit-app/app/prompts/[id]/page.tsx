@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { ChevronLeft, Heart, Copy, Share2, FolderOpen } from "lucide-react";
+import { ChevronLeft, Copy, Share2, FolderOpen } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Heading } from "@/components/typography/heading";
 import { PromptCopyButton } from "@/components/prompts/prompt-copy-button";
+import { PromptLikeButton } from "@/components/prompts/prompt-like-button";
 
 interface PromptPageProps {
     params: {
@@ -18,41 +19,64 @@ interface PromptPageProps {
     };
 }
 
-export default async function PromptPage({ params }: PromptPageProps) {
-    const supabase = await createClient();
-    const { id } = params;
+interface PromptImage {
+    id: string;
+    image_url: string;
+}
 
-    // Fetch prompt details
+interface Category {
+    id: string;
+    name: string;
+}
+
+export default async function PromptPage({ params }: PromptPageProps) {
+    // Make sure to await params properly
+    const { id } = await params;
+    const supabase = await createClient();
+
+    // Fetch prompt details with related data (without profiles)
     const { data: prompt, error } = await supabase
         .from("prompts")
         .select(`
-      *,
-      profiles:user_id (
-        id,
-        username,
-        avatar_url
-      ),
-      folders (
-        id,
-        name
-      ),
-      prompt_images (
-        id,
-        image_url
-      )
-    `)
+            *,
+            folders (
+                id,
+                name
+            ),
+            prompt_images (
+                id,
+                image_url
+            )
+        `)
         .eq("id", id)
         .single();
 
+    // Handle errors or not found early
+    if (error || !prompt) {
+        console.error("Error fetching prompt:", error);
+        return notFound();
+    }
+
+    // Fetch profile data separately
+    const { data: profileData } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .eq("id", prompt.user_id)
+        .maybeSingle();
+
+    // Add profile data to prompt object
+    prompt.profiles = profileData;
+
     // Fetch prompt categories
-    const { data: promptCategories } = await supabase
+    const { data: promptCategoriesData } = await supabase
         .from("prompt_categories")
         .select(`
-      categories (
-        id,
-        name
-      )
-    `)
+            category_id,
+            categories (
+                id,
+                name
+            )
+        `)
         .eq("prompt_id", id);
 
     // Fetch like count
@@ -62,8 +86,8 @@ export default async function PromptPage({ params }: PromptPageProps) {
         .eq("prompt_id", id);
 
     // Check if current user has liked the prompt
-    const { data: session } = await supabase.auth.getSession();
-    const userId = session?.session?.user.id;
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     let hasLiked = false;
     if (userId) {
@@ -77,18 +101,18 @@ export default async function PromptPage({ params }: PromptPageProps) {
         hasLiked = !!likeData;
     }
 
-    // Handle errors or not found
-    if (error || !prompt) {
-        return notFound();
-    }
-
     // Check if the current user can view this prompt
     if (!prompt.is_public && prompt.user_id !== userId) {
         return notFound();
     }
 
-    const categories = promptCategories?.map(item => item.categories) || [];
-    const images = prompt.prompt_images || [];
+    // Transform the categories data to the expected format
+    const categories = promptCategoriesData?.map(item => ({
+        id: item.categories?.id || '',
+        name: item.categories?.name || ''
+    })) || [];
+    const images = (prompt.prompt_images || []) as PromptImage[];
+
     const getInitials = (name: string | null | undefined) => {
         if (!name) return "UK"; // UK for "Unknown"
 
@@ -101,29 +125,29 @@ export default async function PromptPage({ params }: PromptPageProps) {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <Button variant="ghost" className="mb-6" asChild>
+        <div className="container mx-auto px-4 pb-8">
+            <Button variant="ghost" className="mb-4" asChild>
                 <Link href="/prompts/explore">
                     <ChevronLeft className="h-4 w-4 mr-2" />
                     Back to Prompts
                 </Link>
             </Button>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-2 space-y-5">
                     <Heading as="h1" size="3xl" className="break-words">
                         {prompt.title}
                     </Heading>
 
                     {/* Creator Info */}
                     <div className="flex items-center gap-3">
-                        <Link href={`/profiles/${prompt.profiles.username}`} className="flex items-center gap-2">
+                        <Link href={`/profiles/${prompt.profiles?.username || ''}`} className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
-                                <AvatarImage src={prompt.profiles.avatar_url || ""} alt={prompt.profiles.username} />
-                                <AvatarFallback>{getInitials(prompt.profiles.username)}</AvatarFallback>
+                                <AvatarImage src={prompt.profiles?.avatar_url || ""} alt={prompt.profiles?.username || "User"} />
+                                <AvatarFallback>{getInitials(prompt.profiles?.username)}</AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{prompt.profiles.username}</span>
+                            <span className="font-medium">{prompt.profiles?.username || "Anonymous"}</span>
                         </Link>
                         <span className="text-sm text-muted-foreground">
                             {formatDistanceToNow(new Date(prompt.created_at), { addSuffix: true })}
@@ -151,7 +175,7 @@ export default async function PromptPage({ params }: PromptPageProps) {
                     {/* Prompt Images */}
                     {images.length > 0 && (
                         <div className="space-y-4">
-                            {images.map((image) => (
+                            {images.map((image: PromptImage) => (
                                 <div key={image.id} className="relative aspect-video w-full overflow-hidden rounded-lg">
                                     <Image
                                         src={image.image_url}
@@ -167,8 +191,8 @@ export default async function PromptPage({ params }: PromptPageProps) {
 
                     {/* Prompt Content */}
                     <Card>
-                        <CardContent className="p-6">
-                            <pre className="whitespace-pre-wrap font-sans text-sm p-4 bg-muted rounded-md overflow-auto max-h-96">
+                        <CardContent className="p-4">
+                            <pre className="whitespace-pre-wrap font-sans text-sm p-3 bg-muted rounded-md overflow-auto max-h-96">
                                 {prompt.content}
                             </pre>
                         </CardContent>
@@ -176,16 +200,12 @@ export default async function PromptPage({ params }: PromptPageProps) {
                 </div>
 
                 {/* Sidebar */}
-                <div className="space-y-6">
-                    <div className="sticky top-24">
+                <div className="space-y-4">
+                    <div className="sticky top-20">
                         <Card>
-                            <CardContent className="p-6 space-y-4">
+                            <CardContent className="p-4 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <Heart className="h-5 w-5" />
-                                            <span>{likeCount || 0}</span>
-                                        </div>
                                         <div className="flex items-center gap-2">
                                             <Copy className="h-5 w-5" />
                                             <span>{prompt.copy_count}</span>
@@ -194,12 +214,17 @@ export default async function PromptPage({ params }: PromptPageProps) {
                                 </div>
 
                                 <div className="flex flex-col gap-3">
-                                    <PromptCopyButton promptId={prompt.id} />
+                                    <PromptCopyButton
+                                        promptId={prompt.id}
+                                        content={prompt.content}
+                                    />
 
-                                    <Button variant="outline" className="gap-2">
-                                        <Heart className="h-4 w-4" />
-                                        {hasLiked ? "Liked" : "Like"}
-                                    </Button>
+                                    <PromptLikeButton
+                                        promptId={prompt.id}
+                                        initialLiked={hasLiked}
+                                        likeCount={likeCount || 0}
+                                        className="w-full justify-center"
+                                    />
 
                                     <Button variant="outline" className="gap-2">
                                         <Share2 className="h-4 w-4" />

@@ -7,20 +7,21 @@ export async function GET(
 ) {
     try {
         const supabase = await createClient();
-        const { id } = params;
+        const { id } = await params;
 
         // Check if user is authenticated
-        const { data: session } = await supabase.auth.getSession();
-        const userId = session?.session?.user.id;
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
 
-        // Fetch the prompt
+        // Fetch the prompt with all necessary fields - explicit select to avoid relationship issues
         const { data: prompt, error } = await supabase
             .from("prompts")
-            .select("*")
+            .select("id, title, description, content, is_public, user_id, created_at, updated_at, copy_count")
             .eq("id", id)
             .single();
 
         if (error || !prompt) {
+            console.error("Error fetching prompt:", error);
             return NextResponse.json(
                 { error: "Prompt not found" },
                 { status: 404 }
