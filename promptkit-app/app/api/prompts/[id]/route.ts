@@ -13,12 +13,7 @@ export async function GET(
         const { data, error } = await supabase
             .from("prompts")
             .select(`
-                *,
-                profiles (username, avatar_url),
-                prompt_categories (
-                    category_id,
-                    categories (id, name)
-                )
+                *
             `)
             .eq("id", id)
             .single();

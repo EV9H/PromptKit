@@ -36,8 +36,6 @@ interface TrendingPromptCardProps {
 }
 
 export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
-    console.log("trending prompt", prompt);
-    console.log("is public? ", prompt.is_public === false);
     const [creatorInfo, setCreatorInfo] = useState<{
         username: string | null;
         avatar_url: string | null;

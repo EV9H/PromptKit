@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { ChevronLeft, Copy, Share2, FolderOpen, Pencil } from "lucide-react";
+import { ChevronLeft, Copy, Share2, FolderOpen, Pencil, Sparkles } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -223,16 +223,18 @@ export default async function PromptPage({ params }: PromptPageProps) {
                                         content={prompt.content}
                                     />
 
-                                    {/* Add Customize Button */}
-                                    {userId && (
-                                        <PromptCustomizeButton
-                                            promptId={prompt.id}
-                                            originalTitle={prompt.title}
-                                            description={prompt.description || ""}
-                                            content={prompt.content}
-                                            categoryId={categories[0]?.id}
-                                            isPublic={false}
-                                        />
+                                    {/* Show Edit button for owners, Customize button for others */}
+                                    {userId && !isCreator && (
+                                        <Button
+                                            variant="outline"
+                                            className="gap-2"
+                                            asChild
+                                        >
+                                            <Link href={`/prompts/${prompt.id}/edit`}>
+                                                <Sparkles className="h-4 w-4" />
+                                                Customize Prompt
+                                            </Link>
+                                        </Button>
                                     )}
 
                                     {/* Add Edit Button for creators */}

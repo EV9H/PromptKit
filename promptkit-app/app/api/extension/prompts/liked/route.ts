@@ -8,9 +8,11 @@ interface PromptWithCategory {
     description: string;
     created_at: string;
     is_public: boolean;
+    folder_id: string | null;
     categories: {
+        id: string;
         name: string;
-    };
+    } | null;
 }
 
 export async function GET(request: NextRequest) {
@@ -55,7 +57,21 @@ export async function GET(request: NextRequest) {
         // Now fetch the full prompt data for the liked prompts
         const { data: prompts, error: promptsError, count } = await supabase
             .from('prompts')
-            .select('id, title, description, created_at, is_public, categories:categories(name)', { count: 'exact' })
+            .select(`
+                id, 
+                title, 
+                description, 
+                created_at, 
+                is_public,
+                folder_id,
+                user_id,
+                prompt_categories (
+                    categories (
+                        id,
+                        name
+                    )
+                )
+            `, { count: 'exact' })
             .in('id', likedPromptIds)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -68,15 +84,26 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Process prompts to include category name
-        const processedPrompts = (prompts as PromptWithCategory[]).map(prompt => ({
-            id: prompt.id,
-            title: prompt.title,
-            description: prompt.description,
-            created_at: prompt.created_at,
-            is_public: prompt.is_public,
-            category_name: prompt.categories ? prompt.categories.name : null
-        }));
+        // Process prompts to include category information
+        const processedPrompts = (prompts as any[]).map(prompt => {
+            // Extract first category (assuming a prompt can have multiple categories)
+            const category = prompt.prompt_categories &&
+                prompt.prompt_categories.length > 0 &&
+                prompt.prompt_categories[0].categories ?
+                prompt.prompt_categories[0].categories : null;
+
+            return {
+                id: prompt.id,
+                title: prompt.title,
+                description: prompt.description,
+                created_at: prompt.created_at,
+                is_public: prompt.is_public,
+                folder_id: prompt.folder_id,
+                user_id: prompt.user_id,
+                category_id: category ? category.id : null,
+                category_name: category ? category.name : null
+            };
+        });
 
         return NextResponse.json({
             prompts: processedPrompts,
