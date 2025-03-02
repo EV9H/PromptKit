@@ -28,7 +28,8 @@ export default async function ExplorePromptsPage({
         // Build query based on search params
         let query = supabase
             .from("prompts")
-            .select("*, content", { count: "exact" });
+            .select("*, content", { count: "exact" })
+            .eq('is_public', true);
 
         // Apply category filter if provided
         if (params.category) {

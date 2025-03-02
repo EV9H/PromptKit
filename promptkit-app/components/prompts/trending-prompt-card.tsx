@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
-import { Copy, Eye, Quote } from "lucide-react";
+import { Copy, Eye, Quote, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,10 +31,13 @@ interface TrendingPromptCardProps {
         like_count: number;
         preview_image: string | null;
         content?: string;
+        is_public?: boolean;
     };
 }
 
 export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
+    console.log("trending prompt", prompt);
+    console.log("is public? ", prompt.is_public === false);
     const [creatorInfo, setCreatorInfo] = useState<{
         username: string | null;
         avatar_url: string | null;
@@ -140,7 +143,7 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
                     <div className="text-xs text-foreground/90 font-mono space-y-1.5">
                         {/* Add a "system" type prompt line for visual effect */}
                         <div className="text-green-600 dark:text-green-400 font-semibold">
-                            &gt; AI prompt:
+                            &gt; Prompt Preview:
                         </div>
 
                         {/* Content with special formatting */}
@@ -180,11 +183,19 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
             </Link>
 
             <CardHeader className="p-4">
-                <Link href={`/prompts/${prompt.id}`} className="block">
-                    <h3 className="font-semibold text-lg line-clamp-2 hover:underline">
-                        {prompt.title}
-                    </h3>
-                </Link>
+                <div className="flex justify-between items-start">
+                    <Link href={`/prompts/${prompt.id}`} className="block">
+                        <h3 className="font-semibold text-lg line-clamp-2 hover:underline">
+                            {prompt.title}
+                        </h3>
+                    </Link>
+                    {prompt.is_public === false && (
+                        <Badge variant="outline" className="ml-2 flex gap-1 items-center bg-primary">
+                            <Lock className="h-3 w-3" />
+                            Private
+                        </Badge>
+                    )}
+                </div>
                 <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                     {prompt.description || "No description provided"}
                 </p>

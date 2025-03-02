@@ -12,6 +12,7 @@ export default async function Home() {
   const { data: trendingPromptsRaw, error: trendingError } = await supabase
     .from('prompts')
     .select('*, content')
+    .eq('is_public', true)
     .limit(12);
 
   // Process prompts to include only a preview of content

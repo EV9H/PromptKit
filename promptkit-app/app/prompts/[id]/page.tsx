@@ -1,10 +1,10 @@
 import React from "react";
 import { createClient } from "@/utils/supabase/server";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { ChevronLeft, Copy, Share2, FolderOpen } from "lucide-react";
+import { ChevronLeft, Copy, Share2, FolderOpen, Pencil } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Heading } from "@/components/typography/heading";
 import { PromptCopyButton } from "@/components/prompts/prompt-copy-button";
 import { PromptLikeButton } from "@/components/prompts/prompt-like-button";
+import { PromptCustomizeButton } from "@/components/prompts/prompt-customize-button";
 
 interface PromptPageProps {
     params: {
@@ -105,6 +106,9 @@ export default async function PromptPage({ params }: PromptPageProps) {
     if (!prompt.is_public && prompt.user_id !== userId) {
         return notFound();
     }
+
+    // Determine if the current user is the creator of this prompt
+    const isCreator = userId === prompt.user_id;
 
     // Transform the categories data to the expected format
     const categories = promptCategoriesData?.map(item => ({
@@ -218,6 +222,32 @@ export default async function PromptPage({ params }: PromptPageProps) {
                                         promptId={prompt.id}
                                         content={prompt.content}
                                     />
+
+                                    {/* Add Customize Button */}
+                                    {userId && (
+                                        <PromptCustomizeButton
+                                            promptId={prompt.id}
+                                            originalTitle={prompt.title}
+                                            description={prompt.description || ""}
+                                            content={prompt.content}
+                                            categoryId={categories[0]?.id}
+                                            isPublic={false}
+                                        />
+                                    )}
+
+                                    {/* Add Edit Button for creators */}
+                                    {isCreator && (
+                                        <Button
+                                            variant="outline"
+                                            className="gap-2"
+                                            asChild
+                                        >
+                                            <Link href={`/my-prompts/edit/${prompt.id}`}>
+                                                <Pencil className="h-4 w-4" />
+                                                Edit Prompt
+                                            </Link>
+                                        </Button>
+                                    )}
 
                                     <PromptLikeButton
                                         promptId={prompt.id}

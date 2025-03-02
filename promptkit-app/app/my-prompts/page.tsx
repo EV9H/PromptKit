@@ -30,29 +30,23 @@ export default async function MyPromptsPage({
     const offset = (page - 1) * pageSize;
 
     // Fetch user's created prompts
-    const { data: createdPrompts, count: createdCount, error: createdError } = activeTab === "created"
-        ? await supabase
-            .from('prompts')
-            .select('*', { count: 'exact' })
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .range(offset, offset + pageSize - 1)
-        : { data: [], count: 0, error: null };
-
+    const { data: createdPrompts, count: createdCount, error: createdError } = await supabase
+        .from('prompts')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(offset, offset + pageSize - 1)
     // Get the liked prompts by the user - first get the liked prompt IDs
-    let likedPromptIds: string[] = [];
 
-    if (activeTab === "liked") {
-        const { data: likes } = await supabase
-            .from('prompt_likes')
-            .select('prompt_id')
-            .eq('user_id', user.id);
+    const { data: likes } = await supabase
+        .from('prompt_likes')
+        .select('prompt_id')
+        .eq('user_id', user.id);
 
-        likedPromptIds = likes?.map(like => like.prompt_id) || [];
-    }
+    const likedPromptIds = likes?.map(like => like.prompt_id) || [];
 
     // Now fetch the full prompt data for the liked prompts
-    const { data: likedPrompts, count: likedCount, error: likedError } = activeTab === "liked" && likedPromptIds.length > 0
+    const { data: likedPrompts, count: likedCount, error: likedError } = likedPromptIds.length > 0
         ? await supabase
             .from('prompts')
             .select('*', { count: 'exact' })
@@ -111,7 +105,8 @@ export default async function MyPromptsPage({
                 creator_username: profile.username || 'Unknown User',
                 creator_avatar: profile.avatar_url || null,
                 preview_image: prompt.preview_image || null,
-                user_id: prompt.user_id
+                user_id: prompt.user_id,
+                is_public: prompt.is_public
             };
         });
     };
