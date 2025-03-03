@@ -4,7 +4,7 @@ import { TrendingPromptCard } from "@/components/prompts/trending-prompt-card";
 import { PromptCategoryList } from "@/components/prompts/prompt-category-list";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Chrome } from "lucide-react";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -49,7 +49,7 @@ export default async function Home() {
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href="/sign-up">
-                Join Community
+                Join the PromptKit Community
               </Link>
             </Button>
           </div>
@@ -58,14 +58,14 @@ export default async function Home() {
 
       {/* Chrome Extension Banner */}
       <div className="mb-12 flex items-center justify-center">
-        <div className="flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full text-sm">
+          <Chrome className="h-3.5 w-3.5" />
           <span>Boost your productivity with our</span>
           <Button variant="link" asChild className="h-auto p-0">
             <Link href="/extension" className="font-medium text-primary">
-              <span className="underline">Chrome Extension</span>
+              <span>Chrome Extension</span>
             </Link>
           </Button>
-          <ArrowRight className="h-3.5 w-3.5" />
         </div>
       </div>
 

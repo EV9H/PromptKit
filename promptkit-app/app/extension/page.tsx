@@ -99,7 +99,7 @@ export default function ExtensionPage() {
             <div className="mt-24 space-y-12">
                 <div className="text-center">
                     <Heading as="h2" size="2xl">
-                        How it works
+                        Get Started in 3 Steps
                     </Heading>
                 </div>
 

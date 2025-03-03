@@ -9,6 +9,7 @@ import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import "./globals.css";
+import { Heading } from "@/components/typography/heading";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -47,7 +48,7 @@ export default async function RootLayout({
               <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
                 <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
                   <div className="flex gap-5 items-center font-semibold">
-                    <Link href={"/"}>PromptKit</Link>
+                    <Link href={"/"}><Heading>PromptKit</Heading></Link>
                     <Link href={"/prompts/explore"} className="text-muted-foreground hover:text-foreground">
                       Explore
                     </Link>
