@@ -19,7 +19,8 @@
         "storage",
         "identity",
         "tabs",
-        "scripting"
+        "scripting",
+        "windows"
     ],
     "host_permissions": [
         "*://*.promptkit.com/*",

@@ -171,13 +171,13 @@ header h1 {
 }
 
 .prompt-card {
+    position: relative;
     border: 1px solid var(--card-border);
     background-color: var(--card-bg);
     border-radius: var(--radius);
     padding: 16px;
     transition: all 0.2s ease;
     cursor: pointer;
-    position: relative;
     overflow: hidden;
     box-shadow: var(--shadow-sm);
 }
@@ -188,31 +188,204 @@ header h1 {
     box-shadow: var(--shadow-md);
 }
 
-.prompt-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to right, var(--primary-color), var(--primary-light));
-    opacity: 0;
-    z-index: -1;
-    transition: opacity 0.3s ease;
+/* Replace the full background effect with a subtle border flash */
+.prompt-card.copying {
+    border-color: var(--primary-color);
 }
 
-.prompt-card.copying::after {
-    opacity: 0.1;
-}
 
-.prompt-card.copied::after {
-    opacity: 0.2;
+
+@keyframes flash-success {
+    0% {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 1px var(--primary-color);
+    }
+
+    50% {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 2px var(--primary-color);
+    }
+
+    100% {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 1px var(--primary-color);
+    }
 }
 
 .prompt-title {
     font-weight: 600;
     font-size: 16px;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
     color: var(--foreground);
 }
 
+.prompt-content-container {
+    position: relative;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.prompt-content {
+    font-size: 14px;
+    color: var(--foreground);
+    line-height: 1.5;
+    background-color: var(--muted-bg);
+    padding: 12px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid #d82c5d;
+    overflow-wrap: break-word;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+
+/* Add content box copy effect */
+
+
+.prompt-card.copied .prompt-content::after {
+    content: '✓';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    opacity: 0;
+    animation: fade-in-out 0.6s ease;
+}
+
+@keyframes fade-in-out {
+    0% {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1);
+    }
+}
+
+.prompt-card:hover .prompt-content {
+    border-left-color: var(--primary-color);
+    box-shadow: var(--shadow-md);
+}
+
+.content-text,
+.content-full {
+    font-size: 13px;
+    transition: background-color 0.3s ease;
+}
+
+.prompt-card.copied .content-text,
+.prompt-card.copied .content-full {
+    animation: highlight-fade 0.6s ease;
+}
+
+@keyframes highlight-fade {
+    0% {
+        background-color: transparent;
+    }
+
+    30% {
+        background-color: rgba(255, 97, 6, 0.13);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+.copy-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    z-index: 10;
+    animation: fade-in-out 0.6s ease forwards;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes fade-in-out {
+    0% {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    20% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    80% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+}
+
+.expand-toggle {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 12px;
+    padding: 4px 0;
+    margin-top: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.expand-toggle::before {
+    content: '›';
+    font-size: 16px;
+    font-weight: bold;
+    transform: rotate(90deg);
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.prompt-content.expanded+.expand-toggle::before {
+    transform: rotate(-90deg);
+}
+
+.expand-toggle:hover {
+    color: var(--primary-dark);
+}
+
+.prompt-content.expanded {
+    max-height: none;
+}
+
+/* Keep the old description style for backwards compatibility */
 .prompt-description {
     font-size: 14px;
     color: var(--foreground-muted);
@@ -250,8 +423,51 @@ header h1 {
 .error-message {
     color: var(--error-color);
     text-align: center;
-    padding: 16px;
-    display: none;
+    padding: 10px;
+    font-size: 14px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--foreground-muted);
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--foreground);
+}
+
+.empty-state p {
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+}
+
+.primary-btn {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.primary-btn:hover {
+    background-color: var(--primary-dark);
 }
 
 footer {

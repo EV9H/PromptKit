@@ -54,7 +54,9 @@ export default async function RootLayout({
                     <Link href={"/prompts/create"} className="text-muted-foreground hover:text-foreground">
                       Create
                     </Link>
-
+                    <Link href={"/extension"} className="text-muted-foreground hover:text-foreground">
+                      Extension
+                    </Link>
 
                   </div>
                   {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}

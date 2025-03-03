@@ -30,15 +30,55 @@ let allPrompts = {
 // Initialize the popup
 document.addEventListener('DOMContentLoaded', initializePopup);
 
+// Listen for auth updates from the background script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log("Popup received message:", message);
+
+    if (message.type === 'AUTH_UPDATED') {
+        console.log("Auth updated:", message);
+        isAuthenticated = message.isAuthenticated;
+
+        if (isAuthenticated) {
+            // Refresh auth data and UI
+            chrome.storage.local.get(['authToken', 'userId', 'username'], (result) => {
+                authToken = result.authToken;
+                userId = result.userId;
+                updateUIForAuthenticatedUser(result.username || message.username || 'User');
+                fetchPrompts();
+            });
+        } else {
+            updateUIForUnauthenticatedUser();
+        }
+
+        sendResponse({ received: true });
+    }
+
+    return true; // Keep the message channel open for async response
+});
+
 async function initializePopup() {
+    console.log('Initializing popup...');
+
+    // Set up event listeners
+    authButton.addEventListener('click', handleAuthButtonClick);
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            switchTab(button.dataset.tab);
+        });
+    });
+    openAppLink.addEventListener('click', openMainApp);
+
     // Try to get auth token from storage
     chrome.storage.local.get(['authToken', 'userId', 'username'], async (result) => {
+        console.log('Auth data from storage:', result.authToken ? 'Token exists' : 'No token');
+
         if (result.authToken) {
             authToken = result.authToken;
             userId = result.userId;
 
             // Validate the token
             const isValid = await validateToken(authToken);
+            console.log('Token validation result:', isValid);
 
             if (isValid) {
                 isAuthenticated = true;
@@ -46,48 +86,63 @@ async function initializePopup() {
                 fetchPrompts();
             } else {
                 // Token expired, clear storage
+                console.log('Token invalid, clearing storage');
                 chrome.storage.local.remove(['authToken', 'userId', 'username']);
                 updateUIForUnauthenticatedUser();
+
+                // Automatically open sign-in popup after a short delay
+                setTimeout(() => {
+                    openSignInTab();
+                }, 500);
             }
         } else {
+            // No token found, user needs to sign in
+            console.log('No token found, showing sign-in UI');
             updateUIForUnauthenticatedUser();
+
+            // Automatically open sign-in popup after a short delay
+            setTimeout(() => {
+                openSignInTab();
+            }, 500);
         }
     });
-
-    // Set up event listeners
-    authButton.addEventListener('click', handleAuthButtonClick);
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => switchTab(button.dataset.tab));
-    });
-    openAppLink.addEventListener('click', openMainApp);
 }
-
-// Listen for auth updates from the background script
-chrome.runtime.onMessage.addListener((message) => {
-    if (message.type === 'AUTH_UPDATED' && message.isAuthenticated) {
-        // Update state
-        isAuthenticated = true;
-
-        // Reload auth data from storage to ensure we have the latest
-        chrome.storage.local.get(['authToken', 'userId', 'username'], (result) => {
-            authToken = result.authToken;
-            userId = result.userId;
-
-            // Update the UI
-            updateUIForAuthenticatedUser(result.username || message.username || 'User');
-
-            // Fetch prompts with the new auth token
-            fetchPrompts();
-        });
-    }
-});
 
 // Authentication functions
 async function validateToken(token) {
     try {
-        // In a real implementation, make an API call to validate the token
-        // For now, we'll just check if a token exists
-        return !!token;
+        console.log('Validating token...');
+        if (!token) return false;
+
+        // Make a request to the extension validation endpoint
+        const response = await fetch(`${API_BASE_URL}/api/extension/validate-token`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            console.error('Token validation failed:', response.status);
+
+            // If the token is invalid, clear storage
+            if (response.status === 401) {
+                console.log('Session expired, clearing storage');
+                chrome.storage.local.remove(['authToken', 'userId', 'username']);
+            }
+
+            return false;
+        }
+
+        const data = await response.json();
+        console.log('Token validation result:', data);
+
+        // Update last validation time
+        if (data.valid) {
+            chrome.storage.local.set({ lastValidated: Date.now() });
+        }
+
+        return data.valid === true;
     } catch (error) {
         console.error('Error validating token:', error);
         return false;
@@ -110,7 +165,16 @@ function handleAuthButtonClick() {
 
 function openSignInTab() {
     const authUrl = `${API_BASE_URL}/sign-in?callbackUrl=${encodeURIComponent(`${API_BASE_URL}/auth-callback?extension=true`)}`;
-    chrome.tabs.create({ url: authUrl });
+
+    // Use a popup window instead of a new tab for better experience
+    chrome.windows.create({
+        url: authUrl,
+        type: 'popup',
+        width: 600,
+        height: 700
+    }, (window) => {
+        console.log('Opened auth window:', window?.id);
+    });
 }
 
 // UI update functions
@@ -181,76 +245,18 @@ async function fetchFilterOptions() {
         console.log('Fetching filter options...');
 
         // Try to fetch from API
-        let data;
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/extension/filter-options`, {
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error fetching filter options: ${response.status}`);
+        const response = await fetch(`${API_BASE_URL}/api/extension/filter-options`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
             }
+        });
 
-            data = await response.json();
-            console.log('Filter options received:', data);
-        } catch (apiError) {
-            console.error('API error:', apiError);
-            // If API fails, use fallback data
-            console.log('Using fallback filter options');
-            data = {
-                folders: [],
-                categories: []
-            };
-
-            // Get unique categories from existing prompts
-            const allCategories = new Set();
-
-            // Extract categories from created prompts
-            if (allPrompts.created && allPrompts.created.length > 0) {
-                allPrompts.created.forEach(prompt => {
-                    if (prompt.category_id && prompt.category_name) {
-                        allCategories.add(JSON.stringify({
-                            id: prompt.category_id,
-                            name: prompt.category_name
-                        }));
-                    }
-                });
-            }
-
-            // Extract categories from liked prompts
-            if (allPrompts.liked && allPrompts.liked.length > 0) {
-                allPrompts.liked.forEach(prompt => {
-                    if (prompt.category_id && prompt.category_name) {
-                        allCategories.add(JSON.stringify({
-                            id: prompt.category_id,
-                            name: prompt.category_name
-                        }));
-                    }
-                });
-            }
-
-            // If we still don't have any categories, add some test ones
-            if (allCategories.size === 0) {
-                console.log('No categories found in prompts, adding simulated categories');
-                data.categories = [
-                    { id: 'test1', name: 'Writing' },
-                    { id: 'test2', name: 'Coding' },
-                    { id: 'test3', name: 'Marketing' }
-                ];
-
-                data.folders = [
-                    { id: 'folder1', name: 'Personal' },
-                    { id: 'folder2', name: 'Work' }
-                ];
-            } else {
-                // Convert from Set to array
-                data.categories = Array.from(allCategories).map(cat => JSON.parse(cat));
-            }
-
-            console.log('Generated fallback categories:', data.categories);
+        if (!response.ok) {
+            throw new Error(`Error fetching filter options: ${response.status}`);
         }
+
+        const data = await response.json();
+        console.log('Filter options received:', data);
 
         // Update filter options
         filterOptions.folders = data.folders || [];
@@ -263,6 +269,13 @@ async function fetchFilterOptions() {
         createFilterUI('liked');
     } catch (error) {
         console.error('Error handling filter options:', error);
+        // On error, initialize with empty arrays
+        filterOptions.folders = [];
+        filterOptions.categories = [];
+
+        // Still try to create filter UI with empty options
+        createFilterUI('created');
+        createFilterUI('liked');
     }
 }
 
@@ -285,59 +298,11 @@ async function fetchCreatedPrompts() {
         // Store all prompts
         allPrompts.created = data.prompts || [];
 
-        // If no prompts and we're in development, add some mock data
-        if (allPrompts.created.length === 0 && API_BASE_URL.includes('localhost')) {
-            console.log('No created prompts found, adding mock data for development');
-            allPrompts.created = [
-                {
-                    id: 'mock1',
-                    title: 'Mock Created Prompt 1',
-                    description: 'This is a mock prompt for testing',
-                    category_id: 'test1',
-                    category_name: 'Writing',
-                    folder_id: 'folder1'
-                },
-                {
-                    id: 'mock2',
-                    title: 'Mock Created Prompt 2',
-                    description: 'Another mock prompt',
-                    category_id: 'test2',
-                    category_name: 'Coding',
-                    folder_id: 'folder2'
-                }
-            ];
-        }
-
         // Display with current filters
         applyFiltersAndDisplay('created');
     } catch (error) {
         console.error('Error fetching created prompts:', error);
-
-        // Add mock data if we're in development environment
-        if (API_BASE_URL.includes('localhost')) {
-            console.log('Error fetching prompts, adding mock data for development');
-            allPrompts.created = [
-                {
-                    id: 'mock1',
-                    title: 'Mock Created Prompt 1',
-                    description: 'This is a mock prompt for testing',
-                    category_id: 'test1',
-                    category_name: 'Writing',
-                    folder_id: 'folder1'
-                },
-                {
-                    id: 'mock2',
-                    title: 'Mock Created Prompt 2',
-                    description: 'Another mock prompt',
-                    category_id: 'test2',
-                    category_name: 'Coding',
-                    folder_id: 'folder2'
-                }
-            ];
-            applyFiltersAndDisplay('created');
-        } else {
-            showError('created', 'Failed to load your prompts. Please try again.');
-        }
+        showError('created', 'Failed to load your prompts. Please try again.');
     }
 }
 
@@ -360,59 +325,11 @@ async function fetchLikedPrompts() {
         // Store all prompts
         allPrompts.liked = data.prompts || [];
 
-        // If no prompts and we're in development, add some mock data
-        if (allPrompts.liked.length === 0 && API_BASE_URL.includes('localhost')) {
-            console.log('No liked prompts found, adding mock data for development');
-            allPrompts.liked = [
-                {
-                    id: 'mock3',
-                    title: 'Mock Liked Prompt 1',
-                    description: 'This is a liked mock prompt',
-                    category_id: 'test2',
-                    category_name: 'Coding',
-                    folder_id: 'folder1'
-                },
-                {
-                    id: 'mock4',
-                    title: 'Mock Liked Prompt 2',
-                    description: 'Another liked mock prompt',
-                    category_id: 'test3',
-                    category_name: 'Marketing',
-                    folder_id: 'folder2'
-                }
-            ];
-        }
-
         // Display with current filters
         applyFiltersAndDisplay('liked');
     } catch (error) {
         console.error('Error fetching liked prompts:', error);
-
-        // Add mock data if we're in development environment
-        if (API_BASE_URL.includes('localhost')) {
-            console.log('Error fetching prompts, adding mock data for development');
-            allPrompts.liked = [
-                {
-                    id: 'mock3',
-                    title: 'Mock Liked Prompt 1',
-                    description: 'This is a liked mock prompt',
-                    category_id: 'test2',
-                    category_name: 'Coding',
-                    folder_id: 'folder1'
-                },
-                {
-                    id: 'mock4',
-                    title: 'Mock Liked Prompt 2',
-                    description: 'Another liked mock prompt',
-                    category_id: 'test3',
-                    category_name: 'Marketing',
-                    folder_id: 'folder2'
-                }
-            ];
-            applyFiltersAndDisplay('liked');
-        } else {
-            showError('liked', 'Failed to load your liked prompts. Please try again.');
-        }
+        showError('liked', 'Failed to load your liked prompts. Please try again.');
     }
 }
 
@@ -425,7 +342,35 @@ function displayPrompts(tabName, prompts) {
     loadingElement.style.display = 'none';
 
     if (!prompts || prompts.length === 0) {
-        promptListElement.innerHTML = `<div class="content-area">No ${tabName} prompts found.</div>`;
+        let message, buttonText;
+
+        if (tabName === 'created') {
+            message = 'You haven\'t created any prompts yet.';
+            buttonText = 'Create Your First Prompt';
+        } else {
+            message = 'You haven\'t liked any prompts yet.';
+            buttonText = 'Browse Popular Prompts';
+        }
+
+        promptListElement.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📝</div>
+                <h3>${message}</h3>
+                <p>Get started with PromptKit by visiting our web app.</p>
+                <button class="primary-btn go-to-app" data-action="${tabName === 'created' ? 'create' : 'browse'}">${buttonText}</button>
+            </div>
+        `;
+
+        // Add event listener for the button
+        promptListElement.querySelector('.go-to-app').addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            if (action === 'create') {
+                window.open(`${API_BASE_URL}/prompts/create`, '_blank');
+            } else {
+                window.open(`${API_BASE_URL}/prompts/explore`, '_blank');
+            }
+        });
+
         return;
     }
 
@@ -434,10 +379,34 @@ function displayPrompts(tabName, prompts) {
 
     // Add event listeners to prompt cards
     promptListElement.querySelectorAll('.prompt-card').forEach(card => {
-        // Make the card clickable for copying, but ignore clicks on the menu
+        // Add event listeners for expand/collapse
+        const expandToggle = card.querySelector('.expand-toggle');
+        if (expandToggle) {
+            expandToggle.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent card click (copy)
+                const contentContainer = card.querySelector('.prompt-content-container');
+                const content = card.querySelector('.prompt-content');
+                const contentText = card.querySelector('.content-text');
+                const contentFull = card.querySelector('.content-full');
+
+                if (content.classList.contains('expanded')) {
+                    // Collapse
+                    contentFull.style.display = 'none';
+                    contentText.style.display = 'block';
+                    content.classList.remove('expanded');
+                } else {
+                    // Expand
+                    contentText.style.display = 'none';
+                    contentFull.style.display = 'block';
+                    content.classList.add('expanded');
+                }
+            });
+        }
+
+        // Make the card clickable for copying, but ignore clicks on the menu or expand button
         card.addEventListener('click', (e) => {
-            // Don't copy if clicking on the menu or menu items
-            if (!e.target.closest('.card-menu')) {
+            // Don't copy if clicking on the menu, menu items, or expand button
+            if (!e.target.closest('.card-menu') && !e.target.closest('.expand-toggle')) {
                 copyPromptContent(card.dataset.promptId);
             }
         });
@@ -483,6 +452,13 @@ function createPromptCard(prompt) {
     // userId is already set globally from chrome.storage.local
     const isOwner = prompt.user_id === userId;
 
+    // Use content instead of description
+    const content = prompt.content || '';
+
+    // Determine if content is long enough to need truncation
+    const isLongContent = content.length > 150;
+    const truncatedContent = isLongContent ? content.substring(0, 150) + '...' : content;
+
     return `
     <div class="prompt-card" data-prompt-id="${prompt.id}">
         <div class="prompt-header">
@@ -495,7 +471,13 @@ function createPromptCard(prompt) {
                 </div>
             </div>
         </div>
-        <div class="prompt-description">${escapeHTML(prompt.description || '')}</div>
+        <div class="prompt-content-container">
+            <div class="prompt-content ${isLongContent ? 'truncated' : ''}">
+                <div class="content-text">${escapeHTML(truncatedContent)}</div>
+                ${isLongContent ? `<div class="content-full" style="display: none;">${escapeHTML(content)}</div>` : ''}
+            </div>
+            ${isLongContent ? `<button class="expand-toggle">Show more</button>` : ''}
+        </div>
         <div class="prompt-metadata">
             ${prompt.category_name ? `<span class="prompt-category">${escapeHTML(prompt.category_name)}</span>` : ''}
             <span class="prompt-copy-hint">Click to copy</span>
@@ -506,52 +488,69 @@ function createPromptCard(prompt) {
 
 async function copyPromptContent(promptId) {
     try {
+        // Find the prompt in our local data
+        let prompt = null;
+
+        // Look in created prompts
+        const createdPrompt = allPrompts.created.find(p => p.id === promptId);
+        if (createdPrompt) {
+            prompt = createdPrompt;
+        } else {
+            // Look in liked prompts
+            const likedPrompt = allPrompts.liked.find(p => p.id === promptId);
+            if (likedPrompt) {
+                prompt = likedPrompt;
+            }
+        }
+
+        if (!prompt) {
+            throw new Error("Prompt not found in local data");
+        }
+
         const promptCard = document.querySelector(`.prompt-card[data-prompt-id="${promptId}"]`);
         if (promptCard) {
             // Add a visual indicator that the card is being copied
             promptCard.classList.add('copying');
         }
 
-        const response = await fetch(`${API_BASE_URL}/api/prompts/${promptId}`, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`
-            }
-        });
+        // Create a temporary indicator
+        const copiedIndicator = document.createElement('div');
+        copiedIndicator.className = 'copy-indicator';
+        copiedIndicator.textContent = 'Copied!';
+        promptCard.appendChild(copiedIndicator);
 
-        if (!response.ok) {
-            throw new Error(`Error: ${response.status}`);
-        }
+        navigator.clipboard.writeText(prompt.content)
+            .then(() => {
+                promptCard.classList.remove("copying");
+                promptCard.classList.add("copied");
 
-        const data = await response.json();
+                // Increment copy count via API
+                fetch(`${API_BASE_URL}/api/prompts/${promptId}/copy-count`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                }).catch(error => console.error('Error incrementing copy count:', error));
 
-        if (data.content) {
-            await navigator.clipboard.writeText(data.content);
-
-            // Increment copy count
-            fetch(`${API_BASE_URL}/api/prompts/${promptId}/copy`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${authToken}`
-                }
-            }).catch(err => console.error('Error incrementing copy count:', err));
-
-            // Show success UI feedback
-            showToast('Copied to clipboard!');
-
-            // Visual feedback on the card
-            if (promptCard) {
-                promptCard.classList.remove('copying');
-                promptCard.classList.add('copied');
-
-                // Reset after animation
                 setTimeout(() => {
-                    promptCard.classList.remove('copied');
-                }, 1500);
-            }
-        }
+                    promptCard.classList.remove("copied");
+                    // Remove the indicator after animation completes
+                    if (promptCard.contains(copiedIndicator)) {
+                        promptCard.removeChild(copiedIndicator);
+                    }
+                }, 600);
+            })
+            .catch(error => {
+                console.error('Error copying prompt content:', error);
+                showToast('Failed to copy to clipboard', true);
+
+                // Remove copying state if there was an error
+                promptCard.classList.remove('copying');
+            });
     } catch (error) {
-        console.error('Error copying prompt:', error);
-        showToast('Failed to copy prompt', true);
+        console.error('Error copying prompt content:', error);
+        showToast('Failed to copy to clipboard', true);
 
         // Remove copying state if there was an error
         const promptCard = document.querySelector(`.prompt-card[data-prompt-id="${promptId}"]`);
@@ -623,6 +622,10 @@ function createFilterUI(tabName) {
         return;
     }
 
+    // Check if we have any filter options to display
+    const hasFilters = (filterOptions.folders && filterOptions.folders.length > 0) ||
+        (filterOptions.categories && filterOptions.categories.length > 0);
+
     // Create filter container if it doesn't exist
     let filterContainer = tabElement.querySelector('.filter-container');
     if (!filterContainer) {
@@ -638,6 +641,13 @@ function createFilterUI(tabName) {
 
     // Clear existing filters
     filterContainer.innerHTML = '';
+
+    // If there are no filter options (no folders or categories), hide the filter container
+    if (!hasFilters) {
+        console.log(`No filter options available for ${tabName}, hiding filter container`);
+        filterContainer.style.display = 'none';
+        return;
+    }
 
     // Add "All" filter
     const allFilter = document.createElement('div');

@@ -2,40 +2,39 @@
 
 // Function to extract auth data from the page
 function extractAuthData() {
-    // Look for auth data in the page
-    // In a real implementation, this would extract from a specific element or global variable
     console.log("Auth callback script running, looking for auth data...");
+    console.log("Current URL:", window.location.href);
 
     try {
-        // In the real app, you would implement a mechanism to expose this data safely
-        // For example, the app might set window.EXTENSION_AUTH_DATA with the token
-        const authData = window.EXTENSION_AUTH_DATA;
+        // Try to get auth data from the global variable set by the app
+        if (window.EXTENSION_AUTH_DATA) {
+            console.log("Auth data found in window.EXTENSION_AUTH_DATA");
+            sendAuthDataToBackground(window.EXTENSION_AUTH_DATA);
+            return;
+        }
 
-        console.log("Auth data found:", authData ? "Yes" : "No");
+        // If window.EXTENSION_AUTH_DATA isn't available yet, we'll check if we're on the right page
+        if (window.location.href.includes('auth-callback') && window.location.href.includes('extension=true')) {
+            console.log("On auth callback page, but auth data not found yet");
 
-        if (authData && authData.token) {
-            sendAuthDataToBackground(authData);
-        } else {
-            console.log("No valid auth data found in window.EXTENSION_AUTH_DATA");
-            // If no auth data is found but we're on the callback page, create a diagnostic element
-            if (window.location.href.includes('auth-callback')) {
-                const diagElement = document.createElement('div');
-                diagElement.innerHTML = `
-                    <div style="padding: 20px; text-align: center;">
-                        <h3 style="color: #ef4444;">Authentication Data Not Found</h3>
-                        <p>The extension is looking for authentication data but couldn't find it.</p>
-                        <p>This could be because:</p>
-                        <ul style="text-align: left; margin: 20px auto; max-width: 400px;">
-                            <li>The auth callback page hasn't set window.EXTENSION_AUTH_DATA</li>
-                            <li>The auth process is still in progress</li>
-                            <li>There was an error during authentication</li>
-                        </ul>
-                    </div>
-                `;
+            // Add a diagnostic element to show that we're looking for auth data
+            const diagElement = document.createElement('div');
+            diagElement.id = 'extension-auth-status';
+            diagElement.innerHTML = `
+                <div style="padding: 10px; margin: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #f8f9fa;">
+                    <h4 style="margin: 0 0 10px 0;">Extension Authentication Status</h4>
+                    <p>The extension is waiting for authentication data...</p>
+                    <p>Status: Looking for window.EXTENSION_AUTH_DATA</p>
+                    <p>If this message persists, please try signing in again.</p>
+                </div>
+            `;
 
-                // Add it to the page but don't replace existing content
+            // Add it to the page if it doesn't already exist
+            if (!document.getElementById('extension-auth-status')) {
                 document.body.appendChild(diagElement);
             }
+        } else {
+            console.log("Not on the expected auth callback page");
         }
     } catch (error) {
         console.error("Error extracting auth data:", error);
@@ -46,6 +45,7 @@ function extractAuthData() {
             <div style="padding: 20px; text-align: center; color: #ef4444;">
                 <h3>Error Processing Authentication</h3>
                 <p>Error message: ${error.message}</p>
+                <p>Please try signing in again or contact support if the issue persists.</p>
             </div>
         `;
         document.body.appendChild(errorElement);
@@ -56,6 +56,11 @@ function extractAuthData() {
 function sendAuthDataToBackground(authData) {
     console.log("Sending auth data to background script...");
 
+    if (!authData || !authData.token) {
+        console.error("Invalid auth data:", authData);
+        return;
+    }
+
     // Send auth data to the background script
     chrome.runtime.sendMessage({
         type: 'AUTH_SUCCESS',
@@ -65,39 +70,94 @@ function sendAuthDataToBackground(authData) {
     }, (response) => {
         if (chrome.runtime.lastError) {
             console.error("Error sending message to background script:", chrome.runtime.lastError);
+
+            // Create an error message for the user
+            const errorMsg = document.createElement('div');
+            errorMsg.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #ef4444;">
+                    <h3>Authentication Error</h3>
+                    <p>Could not communicate with the extension. Please try again or restart your browser.</p>
+                    <p>Error: ${chrome.runtime.lastError.message || 'Unknown error'}</p>
+                </div>
+            `;
+            document.body.innerHTML = '';
+            document.body.appendChild(errorMsg);
         } else {
-            console.log("Message sent successfully:", response);
+            console.log("Auth message sent successfully:", response);
+
+            // Update the page to show success
+            const messageElement = document.createElement('div');
+            messageElement.innerHTML = `
+                <div style="padding: 20px; text-align: center;">
+                    <h3 style="color: #10b981; margin-bottom: 10px;">Authentication Successful!</h3>
+                    <p>You can close this tab and return to the extension.</p>
+                    <p style="font-size: 0.8em; margin-top: 20px;">This tab will close automatically in a few seconds.</p>
+                </div>
+            `;
+
+            // Replace page content
+            document.body.innerHTML = '';
+            document.body.appendChild(messageElement);
+
+            // Auto-close tab after a delay
+            setTimeout(() => {
+                window.close();
+            }, 3000);
         }
     });
-
-    // Update the page to show success
-    const messageElement = document.createElement('div');
-    messageElement.textContent = 'Authentication successful! You can close this tab.';
-    messageElement.style.padding = '20px';
-    messageElement.style.textAlign = 'center';
-    messageElement.style.fontSize = '18px';
-    messageElement.style.color = '#10b981';
-
-    // Append to body or replace content
-    document.body.innerHTML = '';
-    document.body.appendChild(messageElement);
 }
 
-// Also listen for the custom event from the page
+// Listen for the custom event from the page
 window.addEventListener('PROMPTKIT_AUTH_SUCCESS', (event) => {
     console.log("Received custom PROMPTKIT_AUTH_SUCCESS event");
     // @ts-ignore
     const authData = event.detail;
     if (authData && authData.token) {
         sendAuthDataToBackground(authData);
+    } else {
+        console.error("Invalid auth data in PROMPTKIT_AUTH_SUCCESS event:", authData);
     }
 });
 
-// Try to wait for the page to be fully loaded with auth data
-setTimeout(() => {
-    console.log("Extracting auth data after delay...");
-    extractAuthData();
-}, 1000);
+// Check periodically for the auth data
+let checkCount = 0;
+const maxChecks = 20; // Check for 10 seconds (20 * 500ms)
+const checkInterval = setInterval(() => {
+    checkCount++;
+    console.log(`Checking for auth data (${checkCount}/${maxChecks})...`);
+
+    if (window.EXTENSION_AUTH_DATA) {
+        console.log("Auth data found after waiting!");
+        sendAuthDataToBackground(window.EXTENSION_AUTH_DATA);
+        clearInterval(checkInterval);
+    } else if (checkCount >= maxChecks) {
+        console.log("Gave up waiting for auth data after multiple attempts");
+        clearInterval(checkInterval);
+
+        // Show a message to the user if we're on the auth callback page
+        if (window.location.href.includes('auth-callback') && window.location.href.includes('extension=true')) {
+            const timeoutElement = document.createElement('div');
+            timeoutElement.innerHTML = `
+                <div style="padding: 20px; text-align: center; color: #f59e0b;">
+                    <h3>Authentication Timeout</h3>
+                    <p>Could not retrieve authentication data in a reasonable time.</p>
+                    <p>Please try signing in again or refresh this page.</p>
+                    <button id="retry-auth" style="margin-top: 10px; padding: 8px 16px; background-color: #f59e0b; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                        Try Again
+                    </button>
+                </div>
+            `;
+
+            // Don't replace the entire body, just add to it
+            document.body.appendChild(timeoutElement);
+
+            // Add click handler for retry button
+            document.getElementById('retry-auth')?.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
+    }
+}, 500);
 
 // Also execute immediately in case the data is already available
 extractAuthData();

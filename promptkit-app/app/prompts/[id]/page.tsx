@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { ChevronLeft, Copy, Share2, FolderOpen, Pencil, Sparkles } from "lucide-react";
+import { ChevronLeft, Copy, Share2, FolderOpen, Pencil, Sparkles, Heart } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -214,6 +214,10 @@ export default async function PromptPage({ params }: PromptPageProps) {
                                             <Copy className="h-5 w-5" />
                                             <span>{prompt.copy_count}</span>
                                         </div>
+                                        <div className="flex items-center gap-2">
+                                            <Heart className="h-5 w-5" />
+                                            <span>{likeCount || 0}</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -222,7 +226,13 @@ export default async function PromptPage({ params }: PromptPageProps) {
                                         promptId={prompt.id}
                                         content={prompt.content}
                                     />
-
+                                    <PromptLikeButton
+                                        promptId={prompt.id}
+                                        initialLiked={hasLiked}
+                                        likeCount={likeCount || 0}
+                                        className=""
+                                        showCount={false}
+                                    />
                                     {/* Show Edit button for owners, Customize button for others */}
                                     {userId && !isCreator && (
                                         <Button
@@ -236,6 +246,7 @@ export default async function PromptPage({ params }: PromptPageProps) {
                                             </Link>
                                         </Button>
                                     )}
+
 
                                     {/* Add Edit Button for creators */}
                                     {isCreator && (
@@ -251,12 +262,6 @@ export default async function PromptPage({ params }: PromptPageProps) {
                                         </Button>
                                     )}
 
-                                    <PromptLikeButton
-                                        promptId={prompt.id}
-                                        initialLiked={hasLiked}
-                                        likeCount={likeCount || 0}
-                                        className="w-full justify-center"
-                                    />
 
                                     <Button variant="outline" className="gap-2">
                                         <Share2 className="h-4 w-4" />

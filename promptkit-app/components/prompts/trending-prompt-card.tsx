@@ -16,6 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PromptLikeButton } from "@/components/prompts/prompt-like-button";
 import { createClient } from "@/utils/supabase/client";
+import { toast } from "../ui/use-toast";
 
 interface TrendingPromptCardProps {
     prompt: {
@@ -219,9 +220,15 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
                     <PromptLikeButton
                         promptId={prompt.id}
                         likeCount={prompt.like_count}
-                        className="text-sm p-0 h-auto"
+                        className="text-sm p-0 h-auto bg-transparent border-none"
+                        size="sm"
                     />
-                    <span className="flex items-center gap-1 text-sm">
+                    <span className="flex items-center gap-1 text-sm cursor-pointer" onClick={() => {
+                        navigator.clipboard.writeText(prompt.content || "");
+                        toast({
+                            title: "Copied to clipboard",
+                        });
+                    }}>
                         <Copy className="h-4 w-4" />
                         {prompt.copy_count}
                     </span>

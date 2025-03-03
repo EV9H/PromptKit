@@ -4,12 +4,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
 
 interface PromptLikeButtonProps {
     promptId: string;
     initialLiked?: boolean;
     likeCount?: number;
     className?: string;
+    showCount?: boolean;
+    size?: "sm" | "default" | "lg";
 }
 
 export function PromptLikeButton({
@@ -17,10 +20,13 @@ export function PromptLikeButton({
     initialLiked = false,
     likeCount = 0,
     className,
+    showCount = true,
+    size = "default",
 }: PromptLikeButtonProps) {
     const [liked, setLiked] = useState(initialLiked);
     const [count, setCount] = useState(likeCount);
     const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
 
     // Used to set initial state after authentication check
     useEffect(() => {
@@ -52,6 +58,23 @@ export function PromptLikeButton({
                 method: "POST",
             });
 
+            if (response.status === 401) {
+                toast({
+                    title: "Authentication required",
+                    description: "Please sign in to like prompts",
+                    action: (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push("/sign-in")}
+                        >
+                            Sign In
+                        </Button>
+                    ),
+                });
+                return;
+            }
+
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.error || "Failed to toggle like");
@@ -81,17 +104,24 @@ export function PromptLikeButton({
 
     return (
         <Button
-            variant="ghost"
-            size="sm"
+            variant="outline"
+            size={size}
             onClick={toggleLike}
             disabled={isLoading}
-            className={`flex items-center gap-1 ${className}`}
-            title={liked ? "Unlike this prompt" : "Like this prompt"}
+            className={`gap-2 w-full ${className}`}
         >
             <Heart
                 className={`h-4 w-4 ${liked ? "fill-red-500 text-red-500" : ""}`}
             />
-            <span>{count}</span>
+            {showCount ? (
+                <>
+                    <span>{count}</span>
+                </>
+            ) : (
+                <>
+                    {liked ? "Liked" : "Like"}
+                </>
+            )}
         </Button>
     );
 } 

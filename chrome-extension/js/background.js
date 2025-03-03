@@ -12,19 +12,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return;
         }
 
-        // Store the authentication data
-        chrome.storage.local.set({
+        // Store the authentication data with a timestamp for better tracking
+        const authData = {
             authToken: message.token,
             userId: message.userId,
-            username: message.username
-        }, () => {
+            username: message.username,
+            timestamp: Date.now() // Add a timestamp to track when auth occurred
+        };
+
+        // Store in chrome.storage.local for persistence
+        chrome.storage.local.set(authData, () => {
             if (chrome.runtime.lastError) {
                 console.error("Error storing auth data:", chrome.runtime.lastError);
                 sendResponse({ success: false, error: chrome.runtime.lastError.message });
                 return;
             }
 
-            console.log('Auth data stored in extension');
+            console.log('Auth data stored in extension:', authData.timestamp);
+
+            // Verify the data was correctly stored for debugging
+            chrome.storage.local.get(['authToken'], (result) => {
+                console.log('Verification - token stored:', !!result.authToken);
+            });
 
             // Close the auth tab
             if (sender.tab) {
@@ -56,17 +65,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Listen for auth callback URL
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url && tab.url.includes('auth-callback?extension=true')) {
-        console.log("Detected auth callback URL, injecting content script");
+    if (changeInfo.status === 'complete' && tab.url) {
+        console.log("Tab updated:", tab.url);
 
-        // Inject content script to extract auth data
-        chrome.scripting.executeScript({
-            target: { tabId },
-            files: ['js/auth-callback.js']
-        }).then(() => {
-            console.log("Content script injected successfully");
-        }).catch(err => {
-            console.error("Error injecting auth callback script:", err);
-        });
+        // Check if this is an auth callback URL
+        if (tab.url.includes('auth-callback') && tab.url.includes('extension=true')) {
+            console.log("Detected auth callback URL, injecting content script");
+
+            // Add a short delay to ensure the page has fully loaded
+            setTimeout(() => {
+                // Inject content script to extract auth data
+                chrome.scripting.executeScript({
+                    target: { tabId },
+                    files: ['js/auth-callback.js']
+                }).then(() => {
+                    console.log("Content script injected successfully");
+                }).catch(err => {
+                    console.error("Error injecting auth callback script:", err);
+                });
+            }, 500);
+        }
     }
 }); 

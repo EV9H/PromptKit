@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
                 id: prompt.id,
                 title: prompt.title,
                 description: prompt.description,
+                content: prompt.content,
                 created_at: prompt.created_at,
                 is_public: prompt.is_public,
                 folder_id: prompt.folder_id,

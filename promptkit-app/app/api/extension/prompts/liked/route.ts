@@ -6,6 +6,7 @@ interface PromptWithCategory {
     id: string;
     title: string;
     description: string;
+    content: string;
     created_at: string;
     is_public: boolean;
     folder_id: string | null;
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
                 id, 
                 title, 
                 description, 
+                content,
                 created_at, 
                 is_public,
                 folder_id,
@@ -96,6 +98,7 @@ export async function GET(request: NextRequest) {
                 id: prompt.id,
                 title: prompt.title,
                 description: prompt.description,
+                content: prompt.content,
                 created_at: prompt.created_at,
                 is_public: prompt.is_public,
                 folder_id: prompt.folder_id,

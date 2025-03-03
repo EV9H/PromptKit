@@ -4,6 +4,7 @@ import { TrendingPromptCard } from "@/components/prompts/trending-prompt-card";
 import { PromptCategoryList } from "@/components/prompts/prompt-category-list";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -31,10 +32,10 @@ export default async function Home() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Hero Section */}
-      <section className="py-12 md:py-24 space-y-6">
+      <section className="py-6 md:py-12 space-y-6">
         <div className="flex flex-col items-center text-center space-y-4">
           <Heading as="h1" size="4xl" className="font-bold tracking-tighter">
-            PromptKit: Discover, Create & Share AI Prompts
+            Thousands of Community-Generated Prompts for Your Every Need.
           </Heading>
           <p className="text-muted-foreground text-lg max-w-[700px] mx-auto">
             Your personal library for organizing, creating, and sharing powerful AI prompts.
@@ -48,12 +49,25 @@ export default async function Home() {
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link href="/sign-up">
-                Get Started
+                Join Community
               </Link>
             </Button>
           </div>
         </div>
       </section>
+
+      {/* Chrome Extension Banner */}
+      <div className="mb-12 flex items-center justify-center">
+        <div className="flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full text-sm text-muted-foreground">
+          <span>Boost your productivity with our</span>
+          <Button variant="link" asChild className="h-auto p-0">
+            <Link href="/extension" className="font-medium text-primary">
+              <span className="underline">Chrome Extension</span>
+            </Link>
+          </Button>
+          <ArrowRight className="h-3.5 w-3.5" />
+        </div>
+      </div>
 
       {/* Trending Prompts Section */}
       <section className="py-12 space-y-6">
