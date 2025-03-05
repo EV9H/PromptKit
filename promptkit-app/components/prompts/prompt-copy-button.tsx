@@ -35,7 +35,6 @@ export function PromptCopyButton({
             }
 
             // Otherwise fetch the content from the API
-            console.log("Fetching prompt content for ID:", promptId);
             const response = await fetch(`/api/prompts/${promptId}`);
 
             if (!response.ok) {
@@ -44,7 +43,6 @@ export function PromptCopyButton({
             }
 
             const data = await response.json();
-            console.log("Received prompt data:", data);
 
             if (!data.content) {
                 console.error("No content in prompt data:", data);
@@ -68,7 +66,6 @@ export function PromptCopyButton({
     const incrementCopyCount = async () => {
         try {
             // Call the API to increment the copy count
-            console.log("Incrementing copy count for:", promptId);
             const response = await fetch(`/api/prompts/${promptId}/copy`, {
                 method: "POST",
             });

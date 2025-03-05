@@ -52,7 +52,6 @@ export function PromptLikeButton({
     const toggleLike = async () => {
         try {
             setIsLoading(true);
-            console.log("Toggling like for prompt:", promptId);
 
             const response = await fetch(`/api/prompts/${promptId}/like`, {
                 method: "POST",
@@ -81,7 +80,6 @@ export function PromptLikeButton({
             }
 
             const data = await response.json();
-            console.log("Like response:", data);
 
             setLiked(data.liked);
             setCount(prev => data.liked ? prev + 1 : prev - 1);

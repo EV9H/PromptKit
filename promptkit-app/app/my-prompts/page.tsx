@@ -2,12 +2,11 @@ import { createClient } from "@/utils/supabase/server";
 import { Heading } from "@/components/typography/heading";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PromptGrid } from "@/components/prompts/prompt-grid";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SearchablePrompts } from "@/components/prompts/searchable-prompts";
 
 interface MyPromptsPageProps {
     searchParams: {
-        tab?: string;
         page?: string;
     };
 }
@@ -24,8 +23,7 @@ export default async function MyPromptsPage({
         redirect("/sign-in?callbackUrl=/my-prompts");
     }
 
-    const activeTab = searchParams.tab || "created";
-    const page = parseInt(searchParams.page || "1");
+    const page = parseInt((await searchParams).page || "1");
     const pageSize = 12;
     const offset = (page - 1) * pageSize;
 
@@ -34,10 +32,9 @@ export default async function MyPromptsPage({
         .from('prompts')
         .select('*', { count: 'exact' })
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + pageSize - 1)
-    // Get the liked prompts by the user - first get the liked prompt IDs
+        .order('created_at', { ascending: false });
 
+    // Get the liked prompts by the user - first get the liked prompt IDs
     const { data: likes } = await supabase
         .from('prompt_likes')
         .select('prompt_id')
@@ -46,14 +43,21 @@ export default async function MyPromptsPage({
     const likedPromptIds = likes?.map(like => like.prompt_id) || [];
 
     // Now fetch the full prompt data for the liked prompts
-    const { data: likedPrompts, count: likedCount, error: likedError } = likedPromptIds.length > 0
-        ? await supabase
+    let likedPrompts: any[] = [];
+    let likedCount = 0;
+    let likedError = null;
+
+    if (likedPromptIds.length > 0) {
+        const result = await supabase
             .from('prompts')
             .select('*', { count: 'exact' })
             .in('id', likedPromptIds)
-            .order('created_at', { ascending: false })
-            .range(offset, offset + pageSize - 1)
-        : { data: [], count: likedPromptIds.length, error: null };
+            .order('created_at', { ascending: false });
+
+        likedPrompts = result.data || [];
+        likedCount = result.count || 0;
+        likedError = result.error;
+    }
 
     // Get usernames for all prompts in a separate query if needed
     const getAllUsernames = async (prompts: any[]) => {
@@ -114,10 +118,6 @@ export default async function MyPromptsPage({
     const processedCreatedPrompts = await formatPrompts(createdPrompts);
     const processedLikedPrompts = await formatPrompts(likedPrompts);
 
-    // Calculate total pages
-    const totalCreatedPages = createdCount ? Math.ceil(createdCount / pageSize) : 0;
-    const totalLikedPages = likedCount ? Math.ceil(likedCount / pageSize) : 0;
-
     return (
         <div className="container mx-auto px-4 py-8">
             <Heading as="h1" size="2xl" className="mb-8">
@@ -132,17 +132,17 @@ export default async function MyPromptsPage({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Tabs defaultValue={activeTab} className="space-y-6">
+                    <Tabs defaultValue="created" className="space-y-6">
                         <TabsList className="grid w-full md:w-auto grid-cols-2">
-                            <TabsTrigger value="created" asChild>
-                                <a href="/my-prompts?tab=created">
+                            <TabsTrigger value="created">
+                                <span className="text-sm font-medium">
                                     Created Prompts
-                                </a>
+                                </span>
                             </TabsTrigger>
-                            <TabsTrigger value="liked" asChild>
-                                <a href="/my-prompts?tab=liked">
+                            <TabsTrigger value="liked">
+                                <span className="text-sm font-medium">
                                     Saved & Liked Prompts
-                                </a>
+                                </span>
                             </TabsTrigger>
                         </TabsList>
 
@@ -151,11 +151,10 @@ export default async function MyPromptsPage({
                                 <div className="text-destructive">
                                     Failed to load your prompts: {createdError.message}
                                 </div>
-                            ) : processedCreatedPrompts.length > 0 ? (
-                                <PromptGrid
+                            ) : processedCreatedPrompts && processedCreatedPrompts.length > 0 ? (
+                                <SearchablePrompts
                                     prompts={processedCreatedPrompts}
-                                    currentPage={page}
-                                    totalPages={totalCreatedPages}
+                                    activeTab="created"
                                 />
                             ) : (
                                 <div className="text-center py-16">
@@ -177,11 +176,10 @@ export default async function MyPromptsPage({
                                 <div className="text-destructive">
                                     Failed to load your liked prompts: {likedError.message}
                                 </div>
-                            ) : processedLikedPrompts.length > 0 ? (
-                                <PromptGrid
+                            ) : processedLikedPrompts && processedLikedPrompts.length > 0 ? (
+                                <SearchablePrompts
                                     prompts={processedLikedPrompts}
-                                    currentPage={page}
-                                    totalPages={totalLikedPages}
+                                    activeTab="liked"
                                 />
                             ) : (
                                 <div className="text-center py-16">
