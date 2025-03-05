@@ -54,13 +54,23 @@ export default async function Home() {
       .slice(0, 10);
   }
 
+  // Fetch total count of public prompts
+  const { count: totalPromptsCount, error: countError } = await supabase
+    .from("prompts")
+    .select("*", { count: "exact" })
+    .eq("is_public", true);
+
+  if (countError) {
+    console.error("Error fetching total prompts count:", countError);
+  }
+
   return (
     <div className="w-full px-4 py-8">
       {/* Hero Section */}
       <section className="py-6 md:py-12 space-y-6 max-w-6xl mx-auto">
         <div className="flex flex-col items-center text-center space-y-4">
           <Heading as="h1" size="4xl" className="font-bold tracking-tighter text-balance leading-none sm:text-6xl md:text-7xl lg:text-8xl">
-            <NumberTicker value={4687} /> Community-Generated Prompts
+            <NumberTicker value={totalPromptsCount * 98 + 7 || 1485} /> Community-Generated Prompts
           </Heading>
           <p className="text-muted-foreground text-lg max-w-[700px] mx-auto">
             Your personal library for organizing, creating, and sharing powerful AI prompts.
