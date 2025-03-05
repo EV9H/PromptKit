@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { ChevronLeft, Copy, Share2, FolderOpen, Pencil, Sparkles, Heart } from "lucide-react";
+import { ChevronLeft, Copy, Share2, FolderOpen, Pencil, Sparkles, Heart, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Heading } from "@/components/typography/heading";
 import { PromptCopyButton } from "@/components/prompts/prompt-copy-button";
 import { PromptLikeButton } from "@/components/prompts/prompt-like-button";
 import { PromptCustomizeButton } from "@/components/prompts/prompt-customize-button";
+import { PromptViewCounter } from "@/components/prompts/prompt-view-counter";
+import { BackButtonWrapper } from "@/components/prompts/back-button-wrapper";
 
 interface PromptPageProps {
     params: {
@@ -114,7 +116,7 @@ export default async function PromptPage({ params }: PromptPageProps) {
     const categories = promptCategoriesData?.map(item => ({
         id: item.categories?.id || '',
         name: item.categories?.name || ''
-    })) || [];
+    })) as Category[] || [];
     const images = (prompt.prompt_images || []) as PromptImage[];
 
     const getInitials = (name: string | null | undefined) => {
@@ -129,13 +131,13 @@ export default async function PromptPage({ params }: PromptPageProps) {
     };
 
     return (
-        <div className="container mx-auto px-4 pb-8">
-            <Button variant="ghost" className="mb-4" asChild>
-                <Link href="/prompts/explore">
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Back to Prompts
-                </Link>
-            </Button>
+        <div className="container max-w-6xl py-6">
+            {/* Hidden component to increment view count */}
+            <PromptViewCounter promptId={prompt.id} />
+
+            <div className="mb-6">
+                <BackButtonWrapper fallbackUrl="/prompts/explore" />
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content */}
@@ -217,6 +219,10 @@ export default async function PromptPage({ params }: PromptPageProps) {
                                         <div className="flex items-center gap-2">
                                             <Heart className="h-5 w-5" />
                                             <span>{likeCount || 0}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Eye className="h-5 w-5" />
+                                            <span>{prompt.view_count || 0}</span>
                                         </div>
                                     </div>
                                 </div>

@@ -64,7 +64,7 @@ export default async function RootLayout({
 
                 </div>
               </nav>
-              <div className="flex flex-col gap-8 max-w-5xl w-full">
+              <div className="flex flex-col gap-8 px-8 w-full">
                 {children}
               </div>
 

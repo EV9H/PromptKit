@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,7 +25,7 @@ const formSchema = z.object({
     categoryId: z.string({
         required_error: "Please select a category",
     }),
-    isPublic: z.boolean().default(true),
+    isPublic: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -40,6 +40,7 @@ interface CreatePromptFormProps {
 export function CreatePromptForm({ categories }: CreatePromptFormProps) {
     const router = useRouter();
     const [showAdditional, setShowAdditional] = useState(false);
+    const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(formSchema),
@@ -48,9 +49,16 @@ export function CreatePromptForm({ categories }: CreatePromptFormProps) {
             description: "",
             content: "",
             categoryId: "",
-            isPublic: true,
+            isPublic: false,
         },
     });
+
+    // Focus on the content textarea when component mounts
+    useEffect(() => {
+        if (contentTextareaRef.current) {
+            contentTextareaRef.current.focus();
+        }
+    }, []);
 
     const onSubmit = async (data: FormValues) => {
         try {
@@ -101,6 +109,10 @@ export function CreatePromptForm({ categories }: CreatePromptFormProps) {
                                     placeholder="Enter your prompt content here..."
                                     className="min-h-[300px] text-base font-medium bg-background resize-y"
                                     {...field}
+                                    ref={(e) => {
+                                        field.ref(e);
+                                        contentTextareaRef.current = e;
+                                    }}
                                 />
                             </FormControl>
                             <FormDescription>
@@ -110,7 +122,6 @@ export function CreatePromptForm({ categories }: CreatePromptFormProps) {
                         </FormItem>
                     )}
                 />
-
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField

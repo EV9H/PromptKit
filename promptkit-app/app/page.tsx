@@ -5,6 +5,8 @@ import { PromptCategoryList } from "@/components/prompts/prompt-category-list";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight, Chrome } from "lucide-react";
+import { NumberTicker } from "@/components/magicui/number-ticker";
+import { LineShadowText } from "@/components/magicui/line-shadow-text";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -24,18 +26,41 @@ export default async function Home() {
   }));
 
   // Fetch categories
-  const { data: categories, error: categoriesError } = await supabase
+  const { data: categoriesRaw, error: categoriesError } = await supabase
     .from('categories')
     .select('*')
     .order('name');
 
+  // Get prompt count for each category and limit to 8 categories
+  let featuredCategories = [];
+  if (categoriesRaw) {
+    const categoryCounts = await Promise.all(
+      categoriesRaw.map(async (category) => {
+        const { count, error: countError } = await supabase
+          .from("prompt_categories")
+          .select("*", { count: "exact" })
+          .eq("category_id", category.id);
+
+        return {
+          ...category,
+          promptCount: countError ? 0 : count || 0
+        };
+      })
+    );
+
+    // Sort categories by prompt count (most popular first) and limit to 8
+    featuredCategories = categoryCounts
+      .sort((a, b) => b.promptCount - a.promptCount)
+      .slice(0, 10);
+  }
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full px-4 py-8">
       {/* Hero Section */}
-      <section className="py-6 md:py-12 space-y-6">
+      <section className="py-6 md:py-12 space-y-6 max-w-6xl mx-auto">
         <div className="flex flex-col items-center text-center space-y-4">
-          <Heading as="h1" size="4xl" className="font-bold tracking-tighter">
-            Thousands of Community-Generated Prompts for Your Every Need.
+          <Heading as="h1" size="4xl" className="font-bold tracking-tighter text-balance leading-none sm:text-6xl md:text-7xl lg:text-8xl">
+            <NumberTicker value={4687} /> Community-Generated Prompts
           </Heading>
           <p className="text-muted-foreground text-lg max-w-[700px] mx-auto">
             Your personal library for organizing, creating, and sharing powerful AI prompts.
@@ -71,7 +96,7 @@ export default async function Home() {
 
       {/* Trending Prompts Section */}
       <section className="py-12 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between px-2">
           <Heading as="h2" size="2xl">
             Trending Prompts
           </Heading>
@@ -85,7 +110,7 @@ export default async function Home() {
         {trendingError ? (
           <p className="text-destructive">Failed to load trending prompts</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
             {trendingPrompts?.map((prompt) => (
               <TrendingPromptCard key={prompt.id} prompt={prompt} />
             ))}
@@ -95,14 +120,25 @@ export default async function Home() {
 
       {/* Categories Section */}
       <section className="py-12 space-y-6">
-        <Heading as="h2" size="2xl">
-          Browse by Category
-        </Heading>
+        <div className="flex items-center justify-between px-2">
+          <Heading as="h2" size="2xl">
+            Browse by Category
+          </Heading>
+          <Button variant="ghost" asChild>
+            <Link href="/prompts/categories">
+              View all →
+            </Link>
+          </Button>
+        </div>
 
         {categoriesError ? (
           <p className="text-destructive">Failed to load categories</p>
+        ) : featuredCategories.length > 0 ? (
+          <PromptCategoryList categories={featuredCategories} />
         ) : (
-          <PromptCategoryList categories={categories || []} />
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No categories found</p>
+          </div>
         )}
       </section>
     </div>

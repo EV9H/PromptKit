@@ -3,6 +3,7 @@ import React from "react";
 import { Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { useRouter } from "next/navigation";
 
 interface PromptCopyButtonProps {
     promptId: string;
@@ -18,6 +19,7 @@ export function PromptCopyButton({
     const [isCopied, setIsCopied] = React.useState(false);
     const [isLoading, setIsLoading] = React.useState(false);
     const { toast } = useToast();
+    const router = useRouter();
 
     const copyToClipboard = async () => {
         if (isLoading) return;
@@ -80,6 +82,9 @@ export function PromptCopyButton({
                     title: "Copied to clipboard",
                     description: "The prompt has been copied to your clipboard",
                 });
+
+                // Refresh the page to update the copy count
+                router.refresh();
 
                 // Reset after 2 seconds
                 setTimeout(() => {

@@ -21,7 +21,7 @@ export default async function CreatePromptPage() {
         .order('name');
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-8 max-w-5xl">
             <Heading as="h1" size="2xl" className="mb-8">
                 Create a New Prompt
             </Heading>

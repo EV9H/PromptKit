@@ -30,6 +30,7 @@ interface TrendingPromptCardProps {
         creator_username?: string;
         creator_avatar?: string | null;
         like_count: number;
+        view_count?: number;
         preview_image: string | null;
         content?: string;
         is_public?: boolean;
@@ -232,6 +233,11 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
                         <Copy className="h-4 w-4" />
                         {prompt.copy_count}
                     </span>
+                    <span className="flex items-center gap-1 text-sm cursor-pointer">
+                        <Eye className="h-4 w-4" />
+                        {prompt.view_count}
+                    </span>
+
                 </div>
                 <Button
                     size="sm"

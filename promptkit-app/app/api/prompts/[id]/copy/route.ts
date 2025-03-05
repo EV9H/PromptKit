@@ -7,7 +7,15 @@ export async function POST(
 ) {
     try {
         const supabase = await createClient();
-        const { id } = await params;
+        // Await params before accessing its properties
+        const id = (await params).id;
+
+        if (!id) {
+            return NextResponse.json(
+                { error: "Prompt ID is required" },
+                { status: 400 }
+            );
+        }
 
         // First get the current count
         const { data: currentPrompt, error: fetchError } = await supabase
@@ -24,12 +32,13 @@ export async function POST(
             );
         }
 
+
         // Then increment it
-        const newCount = (currentPrompt.copy_count || 0) + 1;
-        const { error: updateError } = await supabase
-            .from("prompts")
-            .update({ copy_count: newCount })
-            .eq("id", id);
+        const newCount = (currentPrompt?.copy_count || 0) + 1;
+
+        // Use a direct SQL update to ensure it commits
+        const { data: updateData, error: updateError } = await supabase
+            .rpc('increment_copy_count', { row_id: id });
 
         if (updateError) {
             console.error("Error updating copy count:", updateError);
@@ -39,9 +48,18 @@ export async function POST(
             );
         }
 
+
+        // Verify the update worked
+        const { data: updatedPrompt, error: fetchErrorTwo } = await supabase
+            .from("prompts")
+            .select("copy_count")
+            .eq("id", id)
+            .single();
+
+
         return NextResponse.json({
             success: true,
-            copy_count: newCount
+            copy_count: updatedPrompt?.copy_count || newCount
         });
     } catch (error) {
         console.error("Error incrementing copy count:", error);

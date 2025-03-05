@@ -25,6 +25,7 @@ import {
     FormLabel,
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
+import Link from "next/link";
 
 interface Category {
     id: string;
@@ -156,6 +157,11 @@ export function PromptFilterBar({
                                             value={field.value}
                                             onValueChange={(value) => {
                                                 field.onChange(value);
+
+                                                // If user selects a category, we have two options:
+                                                // 1. Apply filter on current page
+                                                // 2. Navigate to the category page
+                                                // Let's go with option 1 for consistency
                                                 onSubmit({ ...form.getValues(), category: value });
                                             }}
                                         >
@@ -171,6 +177,15 @@ export function PromptFilterBar({
                                                 ))}
                                             </SelectContent>
                                         </Select>
+
+                                        <div className="mt-2 text-xs text-muted-foreground">
+                                            <Link
+                                                href="/prompts/categories"
+                                                className="hover:text-primary hover:underline"
+                                            >
+                                                Browse all categories
+                                            </Link>
+                                        </div>
                                     </FormItem>
                                 )}
                             />
