@@ -113,10 +113,10 @@ export default async function PromptPage({ params }: PromptPageProps) {
     const isCreator = userId === prompt.user_id;
 
     // Transform the categories data to the expected format
-    const categories = promptCategoriesData?.map(item => ({
+    const categories = ((promptCategoriesData || []).map(item => ({
         id: item.categories?.id || '',
         name: item.categories?.name || ''
-    })) as Category[] || [];
+    })) || []) as Category[];
     const images = (prompt.prompt_images || []) as PromptImage[];
 
     const getInitials = (name: string | null | undefined) => {
@@ -160,11 +160,6 @@ export default async function PromptPage({ params }: PromptPageProps) {
                         </span>
                     </div>
 
-                    {/* Description */}
-                    {prompt.description && (
-                        <p className="text-muted-foreground">{prompt.description}</p>
-                    )}
-
                     {/* Categories */}
                     {categories.length > 0 && (
                         <div className="flex flex-wrap gap-2">
@@ -196,13 +191,78 @@ export default async function PromptPage({ params }: PromptPageProps) {
                     )}
 
                     {/* Prompt Content */}
-                    <Card>
-                        <CardContent className="p-4">
-                            <pre className="whitespace-pre-wrap font-sans text-sm p-3 bg-muted rounded-md overflow-auto max-h-96">
-                                {prompt.content}
-                            </pre>
+                    <Card className="overflow-hidden border-2 border-primary/10 shadow-lg">
+                        <CardContent className="p-0">
+                            <div className="flex items-center justify-between bg-muted/50 px-4 py-2 border-b">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-primary" />
+                                    <span className="font-medium">Prompt Content</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <PromptCopyButton
+                                        promptId={prompt.id}
+                                        content={prompt.content}
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8"
+                                    />
+                                </div>
+                            </div>
+                            <div className="relative">
+
+
+                                {/* Content with special formatting */}
+                                <div className="p-6 text-md leading-relaxed whitespace-pre-wrap bg-gradient-to-br from-background to-muted/30 min-h-[200px] max-h-[600px] overflow-auto">
+
+                                    <div className="pl-4 border-l-2 border-primary/20">
+                                        {prompt.content}
+                                    </div>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
+
+                    {/* Usage Tips and Examples */}
+                    {prompt.description && (
+                        <Card className="overflow-hidden border border-muted">
+                            <CardContent className="p-0">
+                                <div className="flex items-center bg-muted/30 px-4 py-2 border-b">
+                                    <div className="flex items-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-primary">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="M12 16v-4" />
+                                            <path d="M12 8h.01" />
+                                        </svg>
+                                        <span className="font-medium">How to Use This Prompt</span>
+                                    </div>
+                                </div>
+                                <div className="p-4 space-y-4">
+                                    <div className="text-sm">
+                                        <p className="mb-2 text-muted-foreground">{prompt.description}</p>
+
+                                        <div className="mt-4 space-y-3">
+                                            <div className="bg-primary/5 p-3 rounded-md border border-primary/10">
+                                                <h4 className="font-medium text-primary mb-2 text-sm">Best Practices</h4>
+                                                <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
+                                                    <li>Copy the entire prompt without modifications for best results</li>
+                                                    <li>Replace any placeholder text in [brackets] with your specific information</li>
+                                                    <li>Be specific with your instructions when using this prompt</li>
+                                                </ul>
+                                            </div>
+
+                                            <div className="bg-muted/50 p-3 rounded-md border border-border">
+                                                <h4 className="font-medium mb-2 text-sm">Example Use Case</h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                    This prompt works well for {categories.length > 0 ? categories.map(c => c.name).join(", ") : "various"} scenarios.
+                                                    Try it with different AI models to see how responses vary.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
                 {/* Sidebar */}
@@ -211,18 +271,27 @@ export default async function PromptPage({ params }: PromptPageProps) {
                         <Card>
                             <CardContent className="p-4 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2">
-                                            <Copy className="h-5 w-5" />
-                                            <span>{prompt.copy_count}</span>
+                                    <div className="grid grid-cols-3 w-full gap-2 mb-2">
+                                        <div className="flex flex-col items-center justify-center p-2 bg-muted/50 rounded-md">
+                                            <div className="flex items-center gap-1 text-primary mb-1">
+                                                <Copy className="h-4 w-4" />
+                                                <span className="text-xs font-medium">COPIES</span>
+                                            </div>
+                                            <span className="text-lg font-bold">{prompt.copy_count}</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Heart className="h-5 w-5" />
-                                            <span>{likeCount || 0}</span>
+                                        <div className="flex flex-col items-center justify-center p-2 bg-muted/50 rounded-md">
+                                            <div className="flex items-center gap-1 text-primary mb-1">
+                                                <Heart className="h-4 w-4" />
+                                                <span className="text-xs font-medium">LIKES</span>
+                                            </div>
+                                            <span className="text-lg font-bold">{likeCount || 0}</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Eye className="h-5 w-5" />
-                                            <span>{prompt.view_count || 0}</span>
+                                        <div className="flex flex-col items-center justify-center p-2 bg-muted/50 rounded-md">
+                                            <div className="flex items-center gap-1 text-primary mb-1">
+                                                <Eye className="h-4 w-4" />
+                                                <span className="text-xs font-medium">VIEWS</span>
+                                            </div>
+                                            <span className="text-lg font-bold">{prompt.view_count || 0}</span>
                                         </div>
                                     </div>
                                 </div>

@@ -85,7 +85,7 @@ export default async function Home() {
       <div className="mb-12 flex items-center justify-center">
         <div className="flex items-center gap-2 bg-muted/30 px-4 py-2 rounded-full text-sm">
           <Chrome className="h-3.5 w-3.5" />
-          <span>Boost your productivity with our</span>
+          <span>Access your prompts from anywhere with our</span>
           <Button variant="link" asChild className="h-auto p-0">
             <Link href="/extension" className="font-medium text-primary">
               <span>Chrome Extension</span>

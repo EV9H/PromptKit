@@ -45,7 +45,7 @@ export default async function RootLayout({
         >
           <main className="min-h-screen flex flex-col items-center">
             <div className="flex-1 w-full flex flex-col gap-8 items-center">
-              <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
+              <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16 fixed top-0 z-50 bg-background/70 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
                 <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
                   <div className="flex gap-5 items-center font-semibold">
                     <Link href={"/"}><Heading>PromptKit</Heading></Link>
@@ -64,7 +64,7 @@ export default async function RootLayout({
 
                 </div>
               </nav>
-              <div className="flex flex-col gap-8 px-8 w-full">
+              <div className="flex flex-col gap-8 px-8 w-full mt-16">
                 {children}
               </div>
 

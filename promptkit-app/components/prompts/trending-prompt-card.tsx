@@ -216,7 +216,7 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
                 </div>
             </CardContent>
 
-            <CardFooter className="p-4 pt-0 flex items-center justify-between border-t">
+            <CardFooter className="py-2 px-4 flex items-center justify-between border-t">
                 <div className="flex items-center gap-3">
                     <PromptLikeButton
                         promptId={prompt.id}
@@ -237,9 +237,8 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
                         <Eye className="h-4 w-4" />
                         {prompt.view_count}
                     </span>
-
                 </div>
-                <Button
+                {/* <Button
                     size="sm"
                     variant="ghost"
                     className="gap-1 font-normal"
@@ -249,7 +248,7 @@ export const TrendingPromptCard = ({ prompt }: TrendingPromptCardProps) => {
                         <Eye className="h-4 w-4" />
                         View
                     </Link>
-                </Button>
+                </Button> */}
             </CardFooter>
         </Card>
     );

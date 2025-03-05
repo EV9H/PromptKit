@@ -184,7 +184,9 @@ export function CreatePromptForm({ categories }: CreatePromptFormProps) {
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Description <span className="text-gray-500">(optional)</span></FormLabel>
+                                    <FormLabel>Description
+                                        {/* <span className="text-gray-500">(optional)</span> */}
+                                    </FormLabel>
                                     <FormControl>
                                         <Textarea
                                             placeholder="Briefly describe what your prompt does"
