@@ -10,7 +10,7 @@ import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import "./globals.css";
 import { Heading } from "@/components/typography/heading";
-
+import { Analytics } from "@vercel/analytics/react"
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
@@ -85,6 +85,7 @@ export default async function RootLayout({
           </main>
           <Toaster />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
